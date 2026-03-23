@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "linh-s-blog"
+  },
+  "targets": {
+    "linh-s-blog": {
+      "hosting": {
+        "monforge": ["monforge"]
+      }
+    }
+  },
+  "etags": {}
+}

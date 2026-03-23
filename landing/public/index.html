@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MonForge — Production Monitoring CLI</title>
+  <meta name="description" content="Unified production monitoring dashboard in your terminal. Sentry, Crashlytics, App Store reviews, Google Play — one CLI.">
+  <meta name="keywords" content="monitoring, cli, sentry, crashlytics, app-store, google-play, crash-reporting, reviews, alerts, dashboard, terminal">
+  <meta property="og:title" content="MonForge — Production Monitoring CLI">
+  <meta property="og:description" content="Your production health dashboard in the terminal. Sentry, Crashlytics, app store reviews — one command.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://monforge.linhngo.dev">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --text-dim: #8888a0;
+      --accent: #7c5cfc;
+      --accent-glow: #7c5cfc40;
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --orange: #fb923c;
+      --pink: #f472b6;
+      --cyan: #22d3ee;
+      --red: #f87171;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .bg-glow {
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 20%, #7c5cfc10 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, #22d3ee08 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    .hero-badge a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    h1 {
+      font-size: clamp(36px, 6vw, 56px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    h1 .gradient {
+      background: linear-gradient(135deg, var(--accent), var(--cyan), var(--green));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--text-dim);
+      max-width: 560px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    /* Install box */
+    .install-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 15px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .install-box:hover {
+      border-color: var(--accent);
+    }
+
+    .install-box .dollar {
+      color: var(--text-dim);
+      user-select: none;
+    }
+
+    .install-box code {
+      color: var(--green);
+    }
+
+    .install-box .copy-hint {
+      color: var(--text-dim);
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .install-box:hover .copy-hint {
+      opacity: 1;
+    }
+
+    .install-box.copied code {
+      color: var(--cyan);
+    }
+
+    .hero-links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .hero-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .hero-links a:hover {
+      color: var(--text);
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    /* Terminal demo */
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin: 40px 0;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ff5f57; }
+    .terminal-dot.yellow { background: #febc2e; }
+    .terminal-dot.green { background: #28c840; }
+
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .terminal-body {
+      padding: 20px 24px;
+      font-size: 14px;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    .terminal-body .prompt { color: var(--green); }
+    .terminal-body .cmd { color: var(--text); }
+    .terminal-body .flag { color: var(--cyan); }
+    .terminal-body .string { color: var(--orange); }
+    .terminal-body .comment { color: var(--text-dim); font-style: italic; }
+    .terminal-body .output { color: var(--text-dim); }
+    .terminal-body .success { color: var(--green); }
+    .terminal-body .error { color: var(--red); }
+    .terminal-body .warn { color: var(--orange); }
+
+    /* Providers */
+    .section {
+      padding: 60px 0;
+    }
+
+    .section-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .section-sub {
+      color: var(--text-dim);
+      margin-bottom: 32px;
+      font-size: 15px;
+    }
+
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .provider-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .provider-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .provider-card h3 {
+      font-size: 16px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-card .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+
+    .tag-errors { background: #f8717120; color: var(--red); }
+    .tag-reviews { background: #fb923c20; color: var(--orange); }
+    .tag-crashes { background: #f472b620; color: var(--pink); }
+    .tag-ratings { background: #4ade8020; color: var(--green); }
+
+    .provider-card p {
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .provider-card .capabilities {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .provider-card .capabilities code {
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* Features */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .feature {
+      padding: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .feature .icon {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .feature h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .feature p {
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    /* Commands */
+    .commands-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .command-item {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .command-item code {
+      color: var(--green);
+      white-space: nowrap;
+      min-width: 320px;
+    }
+
+    .command-item span {
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    footer p {
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+      .command-item {
+        flex-direction: column;
+        gap: 4px;
+      }
+      .command-item code {
+        min-width: unset;
+      }
+      .hero { padding: 48px 0 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <div class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">v1.0.0 · <a href="https://www.npmjs.com/package/monforge" target="_blank">npm</a> · <a href="https://github.com/magicpro97/monforge" target="_blank">GitHub</a></div>
+      <h1>📊 <span class="gradient">MonForge</span></h1>
+      <p class="hero-sub">Your production health dashboard in the terminal.<br>Sentry · Crashlytics · App Store · Google Play — one command.</p>
+
+      <div class="install-box" onclick="copyInstall(this)" title="Click to copy">
+        <span class="dollar">$</span>
+        <code>npm install -g monforge</code>
+        <span class="copy-hint">click to copy</span>
+      </div>
+
+      <div class="hero-links">
+        <a href="https://github.com/magicpro97/monforge" target="_blank">⭐ GitHub</a>
+        <a href="https://www.npmjs.com/package/monforge" target="_blank">📦 npm</a>
+        <a href="https://github.com/magicpro97/monforge#commands" target="_blank">📖 Docs</a>
+      </div>
+    </section>
+
+    <!-- Terminal Demo -->
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="terminal-dot red"></div>
+        <div class="terminal-dot yellow"></div>
+        <div class="terminal-dot green"></div>
+        <div class="terminal-title">Terminal</div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="comment"># Check your production health in one command</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">monforge status</span></div>
+        <div>&nbsp;</div>
+        <div><span class="output">  ╔══════════════════════════════════════════════════════╗</span></div>
+        <div><span class="output">  ║          📊 MonForge — Health Dashboard             ║</span></div>
+        <div><span class="output">  ╚══════════════════════════════════════════════════════╝</span></div>
+        <div>&nbsp;</div>
+        <div><span class="output">  ┌─ Application Health ─────────────────────────────┐</span></div>
+        <div><span class="success">  │  🟢 Sentry         Crash-free: 99.72%</span></div>
+        <div><span class="output">  │     Users: 99.85%  Crashes: 142  ANR: 0.03%</span></div>
+        <div><span class="warn">  │  🟡 Crashlytics    Crash-free: 97.80%</span></div>
+        <div><span class="output">  │     Users: 98.10%  Crashes: 891  ANR: 0.42%</span></div>
+        <div><span class="output">  └──────────────────────────────────────────────────┘</span></div>
+        <div>&nbsp;</div>
+        <div><span class="output">  ┌─ App Store Ratings ──────────────────────────────┐</span></div>
+        <div><span class="output">  │  ★★★★★ 4.7  App Store (12,847 reviews)</span></div>
+        <div><span class="output">  │  ★★★★☆ 4.3  Google Play (8,291 reviews)</span></div>
+        <div><span class="output">  └──────────────────────────────────────────────────┘</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># View top errors across all providers</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">monforge errors</span> <span class="flag">--limit 5</span></div>
+      </div>
+    </div>
+
+    <!-- Providers -->
+    <section class="section">
+      <h2 class="section-title">4 Providers, One CLI</h2>
+      <p class="section-sub">Aggregate production data from all your monitoring sources.</p>
+
+      <div class="provider-grid">
+        <div class="provider-card">
+          <h3>🔍 Sentry <span class="tag tag-errors">Errors</span></h3>
+          <p>Error tracking, crash-free rate, issue management via Sentry API.</p>
+          <div class="capabilities"><code>errors</code> <code>crash-rate</code> <code>stats</code></div>
+        </div>
+        <div class="provider-card">
+          <h3>🔥 Crashlytics <span class="tag tag-crashes">Crashes</span></h3>
+          <p>Firebase crash analytics, ANR tracking, crash-free users percentage.</p>
+          <div class="capabilities"><code>crashes</code> <code>ANR</code> <code>stats</code></div>
+        </div>
+        <div class="provider-card">
+          <h3>🍎 App Store <span class="tag tag-reviews">Reviews</span></h3>
+          <p>App Store Connect reviews, ratings, and version-specific feedback.</p>
+          <div class="capabilities"><code>reviews</code> <code>ratings</code></div>
+        </div>
+        <div class="provider-card">
+          <h3>🤖 Google Play <span class="tag tag-ratings">Ratings</span></h3>
+          <p>Google Play Developer API reviews, ratings, and user feedback.</p>
+          <div class="capabilities"><code>reviews</code> <code>ratings</code></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section">
+      <h2 class="section-title">Features</h2>
+      <p class="section-sub">Everything you need to monitor production health from the command line.</p>
+
+      <div class="feature-grid">
+        <div class="feature">
+          <div class="icon">📊</div>
+          <h3>Unified Dashboard</h3>
+          <p>Combine crash rates, error counts, ratings, and reviews in a single terminal view.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🚨</div>
+          <h3>Custom Alerts</h3>
+          <p>Set threshold rules for crash rates, ANR, ratings. Get notified when things break.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">📝</div>
+          <h3>Health Reports</h3>
+          <p>Generate markdown or plain text reports with crash-free rate, top errors, and rating trends.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⭐</div>
+          <h3>Review Viewer</h3>
+          <p>Browse App Store and Google Play reviews right in your terminal. Filter by platform.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🐛</div>
+          <h3>Error Explorer</h3>
+          <p>List top errors from Sentry and Crashlytics sorted by frequency and impact.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">⚙️</div>
+          <h3>Easy Config</h3>
+          <p>Simple key-value config for provider tokens. Stored locally at ~/.monforge/.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Commands -->
+    <section class="section">
+      <h2 class="section-title">Quick Start</h2>
+      <p class="section-sub">Get started in seconds.</p>
+
+      <div class="commands-list">
+        <div class="command-item">
+          <code>npm install -g monforge</code>
+          <span>Install globally</span>
+        </div>
+        <div class="command-item">
+          <code>monforge config set sentry.authToken &lt;token&gt;</code>
+          <span>Configure Sentry</span>
+        </div>
+        <div class="command-item">
+          <code>monforge status</code>
+          <span>View health dashboard</span>
+        </div>
+        <div class="command-item">
+          <code>monforge errors --limit 10</code>
+          <span>List top errors</span>
+        </div>
+        <div class="command-item">
+          <code>monforge reviews ios</code>
+          <span>View App Store reviews</span>
+        </div>
+        <div class="command-item">
+          <code>monforge alerts set "crash-rate > 1"</code>
+          <span>Set a crash rate alert</span>
+        </div>
+        <div class="command-item">
+          <code>monforge report --format md</code>
+          <span>Generate a health report</span>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Built by <a href="https://github.com/magicpro97" target="_blank">@magicpro97</a> ·
+        <a href="https://github.com/magicpro97/monforge" target="_blank">GitHub</a> ·
+        <a href="https://www.npmjs.com/package/monforge" target="_blank">npm</a> ·
+        MIT License
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    function copyInstall(el) {
+      navigator.clipboard.writeText('npm install -g monforge');
+      el.classList.add('copied');
+      el.querySelector('.copy-hint').textContent = 'copied!';
+      setTimeout(() => {
+        el.classList.remove('copied');
+        el.querySelector('.copy-hint').textContent = 'click to copy';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
