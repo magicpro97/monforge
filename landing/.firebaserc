@@ -5,7 +5,9 @@
   "targets": {
     "linh-s-blog": {
       "hosting": {
-        "monforge": ["monforge"]
+        "monforge-landing": [
+          "monforge-landing"
+        ]
       }
     }
   },
