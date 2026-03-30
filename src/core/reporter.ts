@@ -42,7 +42,12 @@ function generateMarkdownReport(data: DashboardData): string {
       lines.push(`### ${r.provider}`);
       lines.push(`- **Average**: ${r.data.average.toFixed(1)} / 5.0`);
       lines.push(`- **Total Reviews**: ${r.data.total.toLocaleString()}`);
-      lines.push(`- **Distribution**: ⭐5: ${r.data.distribution[5]} | ⭐4: ${r.data.distribution[4]} | ⭐3: ${r.data.distribution[3]} | ⭐2: ${r.data.distribution[2]} | ⭐1: ${r.data.distribution[1]}`);
+      const hasDistribution = Object.values(r.data.distribution).some(v => v > 0);
+      if (hasDistribution) {
+        lines.push(`- **Distribution**: ⭐5: ${r.data.distribution[5]} | ⭐4: ${r.data.distribution[4]} | ⭐3: ${r.data.distribution[3]} | ⭐2: ${r.data.distribution[2]} | ⭐1: ${r.data.distribution[1]}`);
+      } else {
+        lines.push(`- **Distribution**: Not available from API`);
+      }
       lines.push('');
     }
   }
@@ -106,6 +111,12 @@ function generateTextReport(data: DashboardData): string {
     lines.push('── App Store Ratings ──');
     for (const r of data.ratings) {
       lines.push(`  ${r.provider}: ${r.data.average.toFixed(1)}/5.0 (${r.data.total} reviews)`);
+      const hasDistText = Object.values(r.data.distribution).some(v => v > 0);
+      if (hasDistText) {
+        lines.push(`    5★: ${r.data.distribution[5]}  4★: ${r.data.distribution[4]}  3★: ${r.data.distribution[3]}  2★: ${r.data.distribution[2]}  1★: ${r.data.distribution[1]}`);
+      } else {
+        lines.push(`    Distribution: Not available from API`);
+      }
     }
     lines.push('');
   }

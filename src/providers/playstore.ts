@@ -73,24 +73,26 @@ export class PlayStoreProvider implements ReviewProvider {
       throw new Error('Google Play is not configured');
     }
 
-    // Use app details endpoint for ratings
-    const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${this.appId}/reviews?maxResults=1`;
+    // Fetch reviews to compute ratings (API has no aggregated endpoint)
+    const reviews = await this.getReviews(50);
 
-    const response = await fetch(url, { headers: this.headers() });
-    if (!response.ok) {
-      throw new Error(`Google Play API error: ${response.status}`);
+    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let totalRating = 0;
+
+    for (const review of reviews) {
+      const star = Math.round(review.rating);
+      if (star >= 1 && star <= 5) {
+        distribution[star]++;
+        totalRating += review.rating;
+      }
     }
 
-    // Google Play API doesn't provide aggregated ratings in a single call
-    // We'd need to compute from reviews or use a scraping approach
-    const data = (await response.json()) as {
-      tokenPagination?: { totalResults: number };
-    };
+    const average = reviews.length > 0 ? totalRating / reviews.length : 0;
 
     return {
-      average: 0,
-      total: data.tokenPagination?.totalResults || 0,
-      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      average: Math.round(average * 10) / 10,
+      total: reviews.length,
+      distribution: distribution as RatingSummary['distribution'],
       platform: 'android',
     };
   }
