@@ -24,6 +24,7 @@ program
 program
   .command('reviews [platform]')
   .description('Fetch & display app store reviews (ios/android/all)')
+  .option('--sentiment', 'Analyze review sentiment')
   .action(reviewsCommand);
 
 // Errors
